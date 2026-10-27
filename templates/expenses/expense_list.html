@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+
+{% block title %}All Expenses - ExpenseWise{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h1 style="font-size: 1.65rem; font-weight: 700;">Expense History</h1>
+        <p style="color: var(--text-muted); font-size: 0.95rem;">Manage, filter, and search your transactions</p>
+    </div>
+    <a href="{% url 'add_expense' %}" class="btn btn-primary btn-sm">
+        <span>+</span> Add Expense
+    </a>
+</div>
+
+<!-- Search & Filter Controls -->
+<form method="get" class="filter-bar">
+    <div style="flex: 1; min-width: 200px;">
+        <input type="text" name="q" value="{{ search_query }}" class="form-input" placeholder="Search by title..." id="tableSearch">
+    </div>
+
+    <div style="min-width: 170px;">
+        <select name="category" class="form-select">
+            <option value="">All Categories</option>
+            {% for cat in categories %}
+            <option value="{{ cat.id }}" {% if selected_category == cat.id|stringformat:"s" %}selected{% endif %}>
+                {{ cat.icon }} {{ cat.name }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div style="min-width: 140px;">
+        <input type="date" name="from_date" value="{{ from_date }}" class="form-input" title="From Date">
+    </div>
+
+    <div style="min-width: 140px;">
+        <input type="date" name="to_date" value="{{ to_date }}" class="form-input" title="To Date">
+    </div>
+
+    <div style="display: flex; gap: 0.5rem;">
+        <button type="submit" class="btn btn-outline btn-sm">Apply Filter</button>
+        {% if search_query or selected_category or from_date or to_date %}
+        <a href="{% url 'expense_list' %}" class="btn btn-outline btn-sm" style="color: var(--danger);">Reset</a>
+        {% endif %}
+    </div>
+</form>
+
+<!-- Filter Summary Strip -->
+<div style="display: flex; justify-content: space-between; align-items: center; background: #FFFFFF; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.75rem 1.25rem; margin-bottom: 1.25rem; font-size: 0.9rem;">
+    <div>
+        <span>Showing <strong>{{ expenses.count }}</strong> transactions</span>
+    </div>
+    <div>
+        <span>Total for this view: <strong style="font-size: 1.1rem; color: #DC2626;">₹{{ filtered_total|floatformat:2 }}</strong></span>
+    </div>
+</div>
+
+<!-- Transactions Table -->
+<div class="card" style="padding: 0; overflow: hidden;">
+    {% if expenses %}
+    <div class="table-responsive">
+        <table class="table" id="expensesTable">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Title & Details</th>
+                    <th>Category</th>
+                    <th>Payment Method</th>
+                    <th style="text-align: right;">Amount</th>
+                    <th style="text-align: center;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for exp in expenses %}
+                <tr class="expense-row">
+                    <td style="color: var(--text-muted); font-size: 0.85rem; white-space: nowrap;">
+                        {{ exp.date|date:"d M Y" }}
+                    </td>
+                    <td>
+                        <div class="expense-title" style="font-weight: 600;">{{ exp.title }}</div>
+                        {% if exp.description %}
+                        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem;">{{ exp.description|truncatechars:50 }}</div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if exp.category %}
+                        <span class="badge expense-category" style="background-color: {{ exp.category.color }}15; color: {{ exp.category.color }}; border: 1px solid {{ exp.category.color }}30;">
+                            {{ exp.category.icon }} {{ exp.category.name }}
+                        </span>
+                        {% else %}
+                        <span class="badge expense-category" style="background-color: #F1F5F9; color: #64748B;">🏷️ Other</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="pill-payment expense-payment">{{ exp.payment_method }}</span>
+                    </td>
+                    <td style="text-align: right; font-weight: 700; color: #DC2626; white-space: nowrap;">
+                        -₹{{ exp.amount|floatformat:2 }}
+                    </td>
+                    <td style="text-align: center; white-space: nowrap;">
+                        <a href="{% url 'edit_expense' exp.pk %}" class="btn btn-outline btn-sm" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">Edit</a>
+                        <a href="{% url 'delete_expense' exp.pk %}" class="btn btn-outline btn-sm" style="padding: 0.25rem 0.6rem; font-size: 0.8rem; color: var(--danger); border-color: #FECACA;">Delete</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 3rem 1.5rem; color: var(--text-muted);">
+        <span style="font-size: 2.5rem;">🔍</span>
+        <h3 style="margin-top: 0.5rem; font-size: 1.1rem; color: var(--text-main);">No expenses match your filters</h3>
+        <p style="font-size: 0.88rem; margin-top: 0.25rem;">Try adjusting your search criteria or add a new expense.</p>
+        <a href="{% url 'add_expense' %}" class="btn btn-primary btn-sm" style="margin-top: 1rem;">+ Add Expense</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,196 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - ExpenseWise{% endblock %}
+
+{% block content %}
+<!-- Welcome & Quick Action Header -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h1 style="font-size: 1.65rem; font-weight: 700;">Financial Dashboard</h1>
+        <p style="color: var(--text-muted); font-size: 0.95rem;">Overview for <strong>{{ current_month_name }}</strong> &bull; Hello, {{ user.username }} 👋</p>
+    </div>
+    <div style="display: flex; gap: 0.75rem;">
+        <button type="button" class="btn btn-outline btn-sm" onclick="toggleBudgetModal()">
+            ⚙️ Set Budget
+        </button>
+        <a href="{% url 'add_expense' %}" class="btn btn-primary btn-sm">
+            <span>+</span> Add Expense
+        </a>
+    </div>
+</div>
+
+<!-- Quick Budget Update Dropdown (Collapsible) -->
+<div id="budgetModal" style="display: none; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1.25rem; margin-bottom: 1.5rem; box-shadow: var(--shadow-sm);">
+    <form method="post" action="{% url 'update_budget' %}" style="display: flex; align-items: flex-end; gap: 1rem; flex-wrap: wrap;">
+        {% csrf_token %}
+        <div style="flex: 1; min-width: 200px;">
+            <label class="form-label" for="id_amount">Monthly Budget for {{ current_month_name }} (₹)</label>
+            {{ budget_form.amount }}
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm" style="height: 42px;">Save Budget</button>
+        <button type="button" class="btn btn-outline btn-sm" style="height: 42px;" onclick="toggleBudgetModal()">Cancel</button>
+    </form>
+</div>
+
+<!-- 4 Key Metric Cards -->
+<section class="stats-grid">
+    <!-- Card 1: Spent This Month -->
+    <div class="stat-card">
+        <div class="stat-header">
+            <span class="stat-title">Spent This Month</span>
+            <span class="stat-icon" style="background-color: #FEF2F2; color: #EF4444;">💸</span>
+        </div>
+        <div class="stat-amount">₹{{ month_spent|floatformat:2 }}</div>
+        <span class="stat-desc">Current month expenditure</span>
+    </div>
+
+    <!-- Card 2: Monthly Budget -->
+    <div class="stat-card">
+        <div class="stat-header">
+            <span class="stat-title">Monthly Budget</span>
+            <span class="stat-icon" style="background-color: #EEF2FF; color: #4F46E5;">🎯</span>
+        </div>
+        <div class="stat-amount">₹{{ budget_amount|floatformat:2 }}</div>
+        <!-- Budget Progress Bar -->
+        <div class="progress-container">
+            <div class="progress-bar" style="width: {{ budget_percentage }}%; background-color: {% if budget_percentage > 90 %}#EF4444{% elif budget_percentage > 70 %}#F59E0B{% else %}#10B981{% endif %};"></div>
+        </div>
+        <span class="stat-desc" style="margin-top: 0.35rem; display: block;">{{ budget_percentage }}% of budget utilized</span>
+    </div>
+
+    <!-- Card 3: Remaining Budget -->
+    <div class="stat-card">
+        <div class="stat-header">
+            <span class="stat-title">Remaining Budget</span>
+            <span class="stat-icon" style="background-color: #ECFDF5; color: #10B981;">🛡️</span>
+        </div>
+        <div class="stat-amount" style="color: {% if remaining_budget > 0 %}#10B981{% else %}#EF4444{% endif %};">
+            ₹{{ remaining_budget|floatformat:2 }}
+        </div>
+        <span class="stat-desc">{% if remaining_budget > 0 %}Safe to spend{% else %}Budget exceeded!{% endif %}</span>
+    </div>
+
+    <!-- Card 4: Total Lifetime Spent -->
+    <div class="stat-card">
+        <div class="stat-header">
+            <span class="stat-title">Total Lifetime Spend</span>
+            <span class="stat-icon" style="background-color: #F8FAFC; color: #64748B;">📊</span>
+        </div>
+        <div class="stat-amount">₹{{ total_spent|floatformat:2 }}</div>
+        <span class="stat-desc">Across all logged expenses</span>
+    </div>
+</section>
+
+<!-- Dashboard Main Grid: Recent Transactions (Left) + Chart Breakdown (Right) -->
+<div class="dashboard-grid">
+    <!-- Left: Recent Expenses -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <span>🕒</span> Recent Transactions
+            </h2>
+            <a href="{% url 'expense_list' %}" style="font-size: 0.85rem; color: var(--primary); font-weight: 600; text-decoration: none;">
+                View All &rarr;
+            </a>
+        </div>
+
+        {% if recent_expenses %}
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Title</th>
+                        <th>Category</th>
+                        <th>Method</th>
+                        <th style="text-align: right;">Amount</th>
+                        <th style="text-align: center;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for exp in recent_expenses %}
+                    <tr>
+                        <td style="color: var(--text-muted); font-size: 0.85rem;">{{ exp.date|date:"d M Y" }}</td>
+                        <td><strong>{{ exp.title }}</strong></td>
+                        <td>
+                            {% if exp.category %}
+                            <span class="badge" style="background-color: {{ exp.category.color }}15; color: {{ exp.category.color }}; border: 1px solid {{ exp.category.color }}30;">
+                                {{ exp.category.icon }} {{ exp.category.name }}
+                            </span>
+                            {% else %}
+                            <span class="badge" style="background-color: #F1F5F9; color: #64748B;">🏷️ Other</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="pill-payment">{{ exp.payment_method }}</span>
+                        </td>
+                        <td style="text-align: right; font-weight: 700; color: #DC2626;">
+                            -₹{{ exp.amount|floatformat:2 }}
+                        </td>
+                        <td style="text-align: center;">
+                            <a href="{% url 'edit_expense' exp.pk %}" title="Edit" style="text-decoration: none; margin-right: 0.5rem; font-size: 0.9rem;">✏️</a>
+                            <a href="{% url 'delete_expense' exp.pk %}" title="Delete" style="text-decoration: none; font-size: 0.9rem;">🗑️</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted);">
+            <span style="font-size: 2.5rem;">📝</span>
+            <p style="margin-top: 0.75rem; font-weight: 500;">No expenses recorded yet.</p>
+            <a href="{% url 'add_expense' %}" class="btn btn-primary btn-sm" style="margin-top: 0.75rem;">
+                + Add Your First Expense
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Right: Category Breakdown Visual Chart -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <span>📈</span> Spending by Category
+            </h2>
+        </div>
+
+        <div style="position: relative; height: 260px; width: 100%;">
+            <canvas id="expenseChart"></canvas>
+            <div id="chartPlaceholder" style="display: none; text-align: center; padding-top: 4rem; color: var(--text-muted);">
+                <span style="font-size: 2rem;">📊</span>
+                <p style="margin-top: 0.5rem; font-size: 0.9rem;">Add expenses to see category breakdown analytics</p>
+            </div>
+        </div>
+
+        {% if category_summary %}
+        <div style="margin-top: 1.25rem; border-top: 1px solid #F1F5F9; padding-top: 1rem;">
+            <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+                {% for item in category_summary|slice:":4" %}
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.88rem;">
+                    <span style="display: flex; align-items: center; gap: 0.4rem;">
+                        <span>{{ item.category__icon|default:'🏷️' }}</span>
+                        <strong>{{ item.category__name|default:'Uncategorized' }}</strong>
+                    </span>
+                    <span style="font-weight: 600;">₹{{ item.total|floatformat:2 }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleBudgetModal() {
+    const modal = document.getElementById('budgetModal');
+    if (modal.style.display === 'none') {
+        modal.style.display = 'block';
+    } else {
+        modal.style.display = 'none';
+    }
+}
+</script>
+{% endblock %}

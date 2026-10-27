@@ -1,0 +1,88 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ExpenseWise - Personal Finance & Budget Tracker{% endblock %}</title>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Custom Modern CSS -->
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+
+    <!-- Chart.js for interactive analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <!-- Top Navigation -->
+    <header class="navbar">
+        <div class="nav-container">
+            <a href="{% url 'dashboard' %}" class="brand">
+                <span class="brand-icon">💰</span>
+                <span>ExpenseWise</span>
+            </a>
+
+            {% if user.is_authenticated %}
+            <nav>
+                <ul class="nav-links">
+                    <li><a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">Dashboard</a></li>
+                    <li><a href="{% url 'expense_list' %}" class="nav-link {% if request.resolver_match.url_name == 'expense_list' %}active{% endif %}">All Expenses</a></li>
+                    <li>
+                        <a href="{% url 'add_expense' %}" class="btn btn-primary btn-sm">
+                            <span>+</span> Add Expense
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+
+            <div class="nav-user">
+                <span class="user-badge">
+                    <span>👤</span> {{ user.username }}
+                </span>
+                <form action="{% url 'logout' %}" method="post" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline btn-sm">Logout</button>
+                </form>
+            </div>
+            {% else %}
+            <div class="nav-user">
+                <a href="{% url 'login' %}" class="btn btn-outline btn-sm">Login</a>
+                <a href="{% url 'register' %}" class="btn btn-primary btn-sm">Sign Up Free</a>
+            </div>
+            {% endif %}
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Flash Messages -->
+        {% if messages %}
+        <div class="messages-container">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                <span>{{ message }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p><strong>ExpenseWise</strong> &bull; Full-Stack Django Web Application &bull; Built with Django 6, HTML5, CSS3 & JavaScript</p>
+    </footer>
+
+    <!-- Custom JavaScript -->
+    <script src="{% static 'js/main.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
